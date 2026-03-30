@@ -4,6 +4,7 @@ import {
   getUpcomingRenewals,
 } from "@/lib/api";
 import LeaseTable from "@/components/LeaseTable";
+import Link from "next/link";
 
 export const revalidate = 30;
 
@@ -52,13 +53,21 @@ export default async function DashboardPage() {
           </div>
 
           <div className="table-wrapper" style={{ marginBottom: "1rem" }}>
-            <div className="table-title">Recent Expirations (preview)</div>
+            <div className="table-title">
+              Recent Expirations (preview)
+              {allData && allData.pagination.total > 5 && (
+                <Link href="/leases/expirations" className="btn" style={{ marginLeft: "1rem", fontSize: "0.75rem" }}>
+                  View All {allData.pagination.total} →
+                </Link>
+              )}
+            </div>
           </div>
           {allData && (
             <LeaseTable
               data={allData.data}
               pagination={allData.pagination}
               baseHref="/leases/expirations"
+              showPagination={false}
             />
           )}
         </>

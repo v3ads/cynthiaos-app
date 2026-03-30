@@ -21,10 +21,12 @@ interface Props {
   data: LeaseRecord[];
   pagination: Pagination;
   baseHref: string;
+  /** Set to false to hide pagination controls (e.g. dashboard preview tables) */
+  showPagination?: boolean;
 }
 
-export default function LeaseTable({ data, pagination, baseHref }: Props) {
-  const { page, limit, total, total_pages, has_prev, has_next } = pagination;
+export default function LeaseTable({ data, pagination, baseHref, showPagination = true }: Props) {
+  const { page, limit, total, has_prev, has_next } = pagination;
 
   if (data.length === 0) {
     return (
@@ -57,23 +59,25 @@ export default function LeaseTable({ data, pagination, baseHref }: Props) {
           ))}
         </tbody>
       </table>
-      <div className="pagination">
-        <span className="pagination-info">
-          Showing {(page - 1) * limit + 1}–{Math.min(page * limit, total)} of {total}
-        </span>
-        <div className="pagination-actions">
-          {has_prev ? (
-            <Link href={`${baseHref}?page=${page - 1}`} className="btn">← Prev</Link>
-          ) : (
-            <span className="btn" aria-disabled="true">← Prev</span>
-          )}
-          {has_next ? (
-            <Link href={`${baseHref}?page=${page + 1}`} className="btn">Next →</Link>
-          ) : (
-            <span className="btn" aria-disabled="true">Next →</span>
-          )}
+      {showPagination && (
+        <div className="pagination">
+          <span className="pagination-info">
+            Showing {(page - 1) * limit + 1}–{Math.min(page * limit, total)} of {total}
+          </span>
+          <div className="pagination-actions">
+            {has_prev ? (
+              <Link href={`${baseHref}?page=${page - 1}`} className="btn">← Prev</Link>
+            ) : (
+              <span className="btn" aria-disabled="true">← Prev</span>
+            )}
+            {has_next ? (
+              <Link href={`${baseHref}?page=${page + 1}`} className="btn">Next →</Link>
+            ) : (
+              <span className="btn" aria-disabled="true">Next →</span>
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
