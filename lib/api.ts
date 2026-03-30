@@ -1,6 +1,12 @@
 /**
  * CynthiaOS API Client
  * Wraps all calls to the cynthiaos-api service.
+ *
+ * Fix log (data-flow trace):
+ *  1. Backend returns flat { success, total, limit, offset, data } — not { data, pagination }.
+ *     Added adaptResponse() to normalise the shape for all consumers.
+ *  2. /expiring endpoint did not exist — corrected to /expiring-soon.
+ *  3. Backend uses offset/limit pagination — converted page → offset in query params.
  */
 
 const API_BASE =
@@ -39,6 +45,36 @@ export interface HealthResponse {
   db: { connected: boolean; verified_at: string | null };
 }
 
+/** Raw shape returned by cynthiaos-api */
+interface RawApiResponse {
+  success: boolean;
+  total: number;
+  limit: number;
+  offset: number;
+  data: LeaseRecord[];
+}
+
+/**
+ * Normalise the flat backend response into the { data, pagination } shape
+ * expected by all frontend components.
+ */
+function adaptResponse(raw: RawApiResponse, page: number): LeaseListResponse {
+  const limit = raw.limit ?? 20;
+  const total = raw.total ?? 0;
+  const total_pages = Math.max(1, Math.ceil(total / limit));
+  return {
+    data: raw.data ?? [],
+    pagination: {
+      page,
+      limit,
+      total,
+      total_pages,
+      has_prev: page > 1,
+      has_next: page < total_pages,
+    },
+  };
+}
+
 async function fetchApi<T>(path: string, params?: Record<string, string | number>): Promise<T> {
   const url = new URL(`${API_BASE}${path}`);
   if (params) {
@@ -58,13 +94,20 @@ export async function getHealth(): Promise<HealthResponse> {
 }
 
 export async function getLeaseExpirations(page = 1, limit = 20): Promise<LeaseListResponse> {
-  return fetchApi<LeaseListResponse>("/api/v1/leases/expirations", { page, limit });
+  const offset = (page - 1) * limit;
+  const raw = await fetchApi<RawApiResponse>("/api/v1/leases/expirations", { limit, offset });
+  return adaptResponse(raw, page);
 }
 
 export async function getUpcomingRenewals(page = 1, limit = 20): Promise<LeaseListResponse> {
-  return fetchApi<LeaseListResponse>("/api/v1/leases/upcoming-renewals", { page, limit });
+  const offset = (page - 1) * limit;
+  const raw = await fetchApi<RawApiResponse>("/api/v1/leases/upcoming-renewals", { limit, offset });
+  return adaptResponse(raw, page);
 }
 
 export async function getExpiringLeases(page = 1, limit = 20): Promise<LeaseListResponse> {
-  return fetchApi<LeaseListResponse>("/api/v1/leases/expiring", { page, limit });
+  const offset = (page - 1) * limit;
+  // Endpoint is /expiring-soon (not /expiring)
+  const raw = await fetchApi<RawApiResponse>("/api/v1/leases/expiring-soon", { limit, offset });
+  return adaptResponse(raw, page);
 }
